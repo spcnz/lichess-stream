@@ -1,15 +1,12 @@
 [tool.poetry]
-name = "lichess-stream"
+name = "consumer"
 version = "0.1.0"
 description = ""
 authors = ["specnazm <laketic.milena98@gmail.com>"]
 
 [tool.poetry.dependencies]
 python = "^3.8"
-faust-streaming = "^0.8.4"
-kafka-python = "^2.0.2"
-requests = "^2.27.1"
-jsonschema = "^4.4.0"
+faust = "^1.10.4"
 
 [tool.poetry.dev-dependencies]
 

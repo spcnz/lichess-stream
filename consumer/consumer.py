@@ -1,5 +1,5 @@
+import os
 import faust
-import json
 from faust.models.fields import Optional
 
 class GameEvent(faust.Record):
@@ -16,7 +16,7 @@ class GameMove(faust.Record):
 
 
 
-app = faust.App('consumer', broker='kafka://localhost:9092', key_serializer='json')
+app = faust.App('consumer', broker='kafka://' + os.environ['KAFKA'], key_serializer='json')
 moves_topic = app.topic('game-moves', value_type=GameMove)
 events_topic = app.topic('game-events', value_type=bytes)
 
