@@ -1,7 +1,6 @@
 version: '2.4'
 networks:
   cassandra:
-  kafka-net:
 services:
   zoo:
     image: zookeeper:3.4.9
@@ -15,25 +14,20 @@ services:
     volumes:
       - zoo:/data
       - zoolog:/datalog
-    networks:
-      - kafka-net
-
 
   kafka1:
     image: confluentinc/cp-kafka:5.3.1
     container_name: kafka1
     ports:
       - "9092:9092"
-    networks:
-      - kafka-net
     environment:
       KAFKA_BROKER_ID: 1
-      KAFKA_ZOOKEEPER_CONNECT: zoo:2181,zoo:2181
+      KAFKA_ZOOKEEPER_CONNECT: zoo:2181
       KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://kafka1:9092,PLAINTEXT_HOST://localhost:29092
       KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: PLAINTEXT:PLAINTEXT,PLAINTEXT_HOST:PLAINTEXT
       KAFKA_INTER_BROKER_LISTENER_NAME: PLAINTEXT
       KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
-    command: sh -c "((sleep 10 && kafka-topics --create --zookeeper zoo:2181 --replication-factor 1 --partitions 3 --topic MILEENA)&) && /etc/confluent/docker/run "
+    command: sh -c "((sleep 10 && kafka-topics --create --if-not-exists --zookeeper zoo:2181 --replication-factor 3 --partitions 3 --config --topic game-moves)&) && /etc/confluent/docker/run "
     volumes:
       - kafka1:/var/lib/kafka/data
     depends_on:
@@ -44,112 +38,116 @@ services:
       timeout: 30s
       retries: 2
 
-  cass1:
-    build: .   # better to use a specific version, if you want to control upgrades
-    container_name: cass1
-    hostname: cass1
-    mem_limit: 3g  # It's not strictly required, but it's better to have some memory limit
-    healthcheck:
-        test: ["CMD", "cqlsh", "-e", "describe keyspaces" ]
-        interval: 5s
-        timeout: 5s
-        retries: 60
-    networks:
-      - cassandra
-      - kafka-net
+  kafka2:
+    image: confluentinc/cp-kafka:5.3.1
+    container_name: kafka2
     ports:
-      - "9042:9042"  # Expose native binary CQL port for your apps
+      - "9093:9093"
+    environment:
+      KAFKA_BROKER_ID: 2
+      KAFKA_ZOOKEEPER_CONNECT: zoo:2181
+      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://kafka2:9093,PLAINTEXT_HOST://localhost:29093
+      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: PLAINTEXT:PLAINTEXT,PLAINTEXT_HOST:PLAINTEXT
+      KAFKA_INTER_BROKER_LISTENER_NAME: PLAINTEXT
+      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
+    command: sh -c "((sleep 10 && kafka-topics --create --if-not-exists --zookeeper zoo:2181 --replication-factor 3 --partitions 3 --config --topic game-events)&) && /etc/confluent/docker/run "
     volumes:
-      - ~/data/cass1:/var/lib/cassandra    # This is the volume that will persist data for cass1 node
-    environment: &environment    # Declare and save environments variables into "environment"
-        CASSANDRA_SEEDS: "cass1,cass2"    # The first two nodes will be seeds
-        CASSANDRA_CLUSTER_NAME: SolarSystem
-        CASSANDRA_DC: Mars
-        CASSANDRA_RACK: West
-        CASSANDRA_ENDPOINT_SNITCH: GossipingPropertyFileSnitch
-        CASSANDRA_NUM_TOKENS: 128
-        CASSANDRA_KEYSPACE: test
-  cass2:
-    image: cassandra:3.11.8
-    container_name: cass2
-    hostname: cass2
-    mem_limit: 3g
-    healthcheck:
-        test: ["CMD", "cqlsh", "-e", "describe keyspaces" ]
-        interval: 5s
-        timeout: 5s
-        retries: 60
-    networks:
-      - cassandra
-      - kafka-net
-    ports:
-      - "9043:9042"  # Expose native binary CQL port for your apps
-    volumes:
-      - ./data/cass2:/var/lib/cassandra    # This is the volume that will persist data for cass2 node
-    environment: *environment    # point to "environment" to use the same environment variables as cass1
+      - kafka2:/var/lib/kafka/data
     depends_on:
-      cass1:    # start cass2 only after cass1 is healthy
-        condition: service_healthy
+      - zoo
+    healthcheck:
+      test: nc -z localhost 9093
+      interval: 10s
+      timeout: 30s
+      retries: 2
 
-#  kafka-connect1:
-#    image: 'confluentinc/cp-kafka-connect:latest'
-#    container_name: 'kafka-connect1'
-#    hostname: 'kafka-connect1'
+  kafka3:
+    image: confluentinc/cp-kafka:5.3.1
+    container_name: kafka3
+    ports:
+      - "9094:9094"
+    environment:
+      KAFKA_BROKER_ID: 3
+      KAFKA_ZOOKEEPER_CONNECT: zoo:2181
+      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://kafka3:9094,PLAINTEXT_HOST://localhost:29094
+      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: PLAINTEXT:PLAINTEXT,PLAINTEXT_HOST:PLAINTEXT
+      KAFKA_INTER_BROKER_LISTENER_NAME: PLAINTEXT
+      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
+    volumes:
+      - kafka3:/var/lib/kafka/data
+    depends_on:
+      - zoo
+    healthcheck:
+      test: nc -z localhost 9094
+      interval: 10s
+      timeout: 30s
+      retries: 2
+
+#
+#  cass1:
+#    build: . # better to use a specific version, if you want to control upgrades
+#    container_name: cass1
+#    hostname: cass1
+#    mem_limit: 3g  # It's not strictly required, but it's better to have some memory limit
 #    healthcheck:
-#      test: [ "CMD-SHELL", "nc -z localhost 8082 || exit 1" ]
-#      interval: 5s
-#      timeout: 5s
-#      retries: 60
+#        test: ["CMD", "cqlsh", "-e", "describe keyspaces" ]
+#        interval: 5s
+#        timeout: 5s
+#        retries: 60
 #    networks:
-#      - kafka-net
+#      - cassandra
 #    ports:
-#      - '8082:8082'
+#      - "9042:9042"  # Expose native binary CQL port for your apps
 #    volumes:
-#      - ./vol-kafka-connect-jar:/etc/kafka-connect/jars
-#      - ./vol-kafka-connect-conf:/etc/kafka-connect/connectors
-#    environment:
-#      CONNECT_BOOTSTRAP_SERVERS: 'kafka1:9092'
-#      CONNECT_REST_ADVERTISED_HOST_NAME: connect
-#      CONNECT_REST_PORT: 8083
-#      CONNECT_GROUP_ID: compose-connect-group
-#      CONNECT_CONFIG_STORAGE_TOPIC: docker-connect-configs
-#      CONNECT_CONFIG_STORAGE_REPLICATION_FACTOR: 1
-#      CONNECT_OFFSET_STORAGE_TOPIC: docker-connect-offsets
-#      CONNECT_OFFSET_STORAGE_REPLICATION_FACTOR: 1
-#      CONNECT_STATUS_STORAGE_TOPIC: docker-connect-status
-#      CONNECT_STATUS_STORAGE_REPLICATION_FACTOR: 1
-#      CONNECT_KEY_CONVERTER: org.apache.kafka.connect.json.JsonConverter
-#      CONNECT_KEY_CONVERTER_SCHEMA_REGISTRY_URL: 'http://kafka-sr1:8081'
-#      CONNECT_VALUE_CONVERTER: org.apache.kafka.connect.json.JsonConverter
-#      CONNECT_VALUE_CONVERTER_SCHEMA_REGISTRY_URL: 'http://kafka-sr1:8081'
-#      CONNECT_INTERNAL_KEY_CONVERTER: org.apache.kafka.connect.json.JsonConverter
-#      CONNECT_INTERNAL_VALUE_CONVERTER: org.apache.kafka.connect.json.JsonConverter
-#      CONNECT_ZOOKEEPER_CONNECT: 'zoo:2181'
+#      - ~/data/cass1:/var/lib/cassandra    # This is the volume that will persist data for cass1 node
+#    environment: &environment    # Declare and save environments variables into "environment"
+#        CASSANDRA_SEEDS: "cass1,cass2"    # The first two nodes will be seeds
+#        CASSANDRA_CLUSTER_NAME: SolarSystem
+#        CASSANDRA_DC: Mars
+#        CASSANDRA_RACK: West
+#        CASSANDRA_ENDPOINT_SNITCH: GossipingPropertyFileSnitch
+#        CASSANDRA_NUM_TOKENS: 128
+#        CASSANDRA_KEYSPACE: test
+
+#  cass2:
+#    image: cassandra:3.11.8
+#    container_name: cass2
+#    hostname: cass2
+#    healthcheck:
+#        test: ["CMD", "cqlsh", "-e", "describe keyspaces" ]
+#        interval: 5s
+#        timeout: 5s
+#        retries: 60
+#    networks:
+#      - cassandra
+#    ports:
+#      - "9043:9042"  # Expose native binary CQL port for your apps
+#    volumes:
+#      - ./data/cass2:/var/lib/cassandra    # This is the volume that will persist data for cass2 node
+#    environment: *environment    # point to "environment" to use the same environment variables as cass1
 #    depends_on:
-#      zoo:
-#        condition: service_started
-#      kafka1:
-#          condition: service_healthy
-# ##  cass3:
-# ##    image: cassandra:3.11.8
-# ##    container_name: cass3
-# ##    hostname: cass3
-# ##    mem_limit: 2g
-# ##    healthcheck:
-# ##        test: ["CMD", "cqlsh", "-e", "describe keyspaces" ]
-# ##        interval: 5s
-# ##        timeout: 5s
-# ##        retries: 60
-# ##    networks:
-# ##      - cassandra
-# ##    ports:
-# ##      - "9044:9042"  # Expose native binary CQL port for your apps
-# ##    volumes:
-# ##      - ./data/cass3:/var/lib/cassandra    # This is the volume that will persist data for cass3 node
-# ##    environment: *environment    # point to "environment" to use the same environment variables as cass1
-# ##    depends_on:
-# ##      cass2:    # start cass3 only after cass1 is healthy
-# ##        condition: service_healthy # cass3 only after cass2
+#      cass1:    # start cass2 only after cass1 is healthy
+#        condition: service_healthy
+#
+#  cass3:
+#     image: cassandra:3.11.8
+#     container_name: cass3
+#     hostname: cass3
+#     healthcheck:
+#         test: ["CMD", "cqlsh", "-e", "describe keyspaces" ]
+#         interval: 5s
+#         timeout: 5s
+#         retries: 60
+#     networks:
+#       - cassandra
+#     ports:
+#       - "9044:9042"  # Expose native binary CQL port for your apps
+#     volumes:
+#       - ./data/cass3:/var/lib/cassandra    # This is the volume that will persist data for cass3 node
+#     environment: *environment    # point to "environment" to use the same environment variables as cass1
+#     depends_on:
+#       cass2:    # start cass3 only after cass1 is healthy
+#         condition: service_healthy # cass3 only after cass2
 #  kafka-sr1:
 #   image: 'confluentinc/cp-schema-registry:latest'
 #   container_name: 'kafka-sr1'
@@ -171,67 +169,76 @@ services:
 #     - zoo
 
 
-# #
-# #  producer:
-# #    build: ./producer/.
-# #    container_name: producer
-# #    environment:
-# #      KAFKA: "kafka1:9092"
-# #    depends_on:
-# #      kafka1:
-# #        condition: service_healthy
-# #
-# #  consumer:
-# #    build: ./consumer/.
-# #    container_name: consumer
-# #    environment:
-# #      KAFKA: "kafka1:9092"
-# #    depends_on:
-# #      kafka1:
-# #        condition: service_healthy
+#  kafka-connect1:
+#    image: 'confluentinc/cp-kafka-connect:latest'
+#    container_name: 'kafka-connect1'
+#    hostname: 'kafka-connect1'
+#    healthcheck:
+#      test: [ "CMD-SHELL", "nc -z localhost 8082 || exit 1" ]
+#      interval: 5s
+#      timeout: 5s
+#      retries: 60
+#    networks:
+#      - kafka-net
+#    ports:
+#      - '8082:8082'
+#    volumes:
+#      - ./vol-kafka-connect-jar:/etc/kafka-connect/jars
+#      - ./vol-kafka-connect-conf:/etc/kafka-connect/connectors
+#    environment:
+#      - CONNECT_BOOTSTRAP_SERVERS=kafka1:9092
+#      - CONNECT_REST_PORT=8082
+#      - CONNECT_GROUP_ID=cassandraConnect
+#      - CONNECT_CONFIG_STORAGE_TOPIC=cassandraconnect-config
+#      - CONNECT_OFFSET_STORAGE_TOPIC=cassandraconnect-offset
+#      - CONNECT_STATUS_STORAGE_TOPIC=cassandraconnect-status
+#      - CONNECT_KEY_CONVERTER=org.apache.kafka.connect.json.JsonConverter
+#      - CONNECT_VALUE_CONVERTER=org.apache.kafka.connect.json.JsonConverter
+#      - CONNECT_INTERNAL_KEY_CONVERTER=org.apache.kafka.connect.json.JsonConverter
+#      - CONNECT_INTERNAL_VALUE_CONVERTER=org.apache.kafka.connect.json.JsonConverter
+#      - CONNECT_KEY_CONVERTER_SCHEMAS_ENABLE=false
+#      - CONNECT_VALUE_CONVERTER_SCHEMAS_ENABLE=false
+#      - CONNECT_REST_ADVERTISED_HOST_NAME=kafka-connect
+#      - CONNECT_PLUGIN_PATH=/etc/kafka-connect/jars
+#      - CONNECT_CONFIG_STORAGE_REPLICATION_FACTOR=1
+#      - CONNECT_OFFSET_STORAGE_REPLICATION_FACTOR=1
+#      - CONNECT_STATUS_STORAGE_REPLICATION_FACTOR=1
+#    depends_on:
+#      zoo:
+#        condition: service_started
+#      kafka1:
+#          condition: service_healthy
 
-# #  kafka2:
-# #    image: confluentinc/cp-kafka:5.3.1
-# #    container_name: kafka2
-# #    ports:
-# #      - "9093:9093"
-# #    environment:
-# #      KAFKA_ADVERTISED_LISTENERS: LISTENER_DOCKER_INTERNAL://kafka2:19092,LISTENER_DOCKER_EXTERNAL://${DOCKER_HOST_IP:-127.0.0.1}:9092
-# #      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: LISTENER_DOCKER_INTERNAL:PLAINTEXT,LISTENER_DOCKER_EXTERNAL:PLAINTEXT
-# #      KAFKA_INTER_BROKER_LISTENER_NAME: LISTENER_DOCKER_INTERNAL
-# #      KAFKA_ZOOKEEPER_CONNECT: "zoo:2181"
-# #      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
-# #      KAFKA_BROKER_ID: 2
-# #      KAFKA_LOG4J_LOGGERS: "kafka.controller=INFO,kafka.producer.async.DefaultEventHandler=INFO,state.change.logger=INFO"
-# #      KAFKA_AUTO_CREATE_TOPICS_ENABLE: "true"
-# #    volumes:
-# #      - kafka2:/var/lib/kafka/data
-# #    depends_on:
-# #      - zoo
-# #
-# #  kafka3:
-# #    image: confluentinc/cp-kafka:5.3.1
-# #    container_name: kafka3
-# #    ports:
-# #      - "9094:9094"
-# #    environment:
-# #      KAFKA_ADVERTISED_LISTENERS: LISTENER_DOCKER_INTERNAL://kafka3:19092,LISTENER_DOCKER_EXTERNAL://${DOCKER_HOST_IP:-127.0.0.1}:9092
-# #      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: LISTENER_DOCKER_INTERNAL:PLAINTEXT,LISTENER_DOCKER_EXTERNAL:PLAINTEXT
-# #      KAFKA_INTER_BROKER_LISTENER_NAME: LISTENER_DOCKER_INTERNAL
-# #      KAFKA_ZOOKEEPER_CONNECT: "zoo:2181"
-# #      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
-# #      KAFKA_BROKER_ID: 3
-# #      KAFKA_LOG4J_LOGGERS: "kafka.controller=INFO,kafka.producer.async.DefaultEventHandler=INFO,state.change.logger=INFO"
-# #      KAFKA_AUTO_CREATE_TOPICS_ENABLE: "true"
-# #    volumes:
-# #      - kafka3:/var/lib/kafka/data
-# #    depends_on:
-# #      - zoo
+
+  producer:
+     build: ./producer/.
+     container_name: producer
+     environment:
+       KAFKA: "kafka1:9092"
+     depends_on:
+       kafka1:
+         condition: service_healthy
+
+  consumer:
+     build: ./consumer/.
+     container_name: consumer
+     environment:
+       KAFKA1: "kafka1:9092"
+       KAFKA2: "kafka2:9093"
+       KAFKA3: "kafka3:9094"
+     depends_on:
+      kafka1:
+         condition: service_healthy
+      kafka2:
+         condition: service_healthy
+      kafka3:
+         condition: service_healthy
+
 
 
 volumes:
   zoo:
   zoolog:
   kafka1:
-#  kafka2:
-#  kafka3:
+  kafka2:
+  kafka3:
