@@ -25,7 +25,7 @@ def is_move_event(json_data):
     except:
         return False
 
-producer = KafkaProducer(bootstrap_servers=os.environ["KAFKA"], value_serializer=lambda v: json.dumps(v).encode('utf-8'))
+producer = KafkaProducer(bootstrap_servers=os.environ["KAFKA1"], value_serializer=lambda v: json.dumps(v).encode('utf-8'))
 
 def load_game():
     games = requests.get(GAMES_URL.replace("{speed}", "channels")).json()
