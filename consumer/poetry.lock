@@ -265,6 +265,14 @@ optional = false
 python-versions = ">=2.7, !=3.0.*, !=3.1.*, !=3.2.*"
 
 [[package]]
+name = "stockfish"
+version = "3.23.0"
+description = "Wraps the open-source Stockfish chess engine for easy integration into python."
+category = "main"
+optional = false
+python-versions = ">=3.7"
+
+[[package]]
 name = "terminaltables"
 version = "3.1.10"
 description = "Generate simple tables in terminals from a nested list of strings."
@@ -299,7 +307,7 @@ multidict = ">=4.0"
 [metadata]
 lock-version = "1.1"
 python-versions = "^3.8"
-content-hash = "3ccffb3a5578f3a3619d493615b5662958605fe687ba8f1710ca3877138afa93"
+content-hash = "a5d0619b59e5f3ee150513ebf4f729cec002c882fb589a5d024c2be2a5812d0a"
 
 [metadata.files]
 aiohttp = [
@@ -578,6 +586,10 @@ robinhood-aiokafka = [
 six = [
     {file = "six-1.16.0-py2.py3-none-any.whl", hash = "sha256:8abb2f1d86890a2dfb989f9a77cfcfd3e47c2a354b01111771326f8aa26e0254"},
     {file = "six-1.16.0.tar.gz", hash = "sha256:1e61c37477a1626458e36f7b1d82aa5c9b094fa4802892072e49de9c60c4c926"},
+]
+stockfish = [
+    {file = "stockfish-3.23.0-py3-none-any.whl", hash = "sha256:ac9ce184b3e826e3d0727114a465d604d60899334a4dc2ecbe08be063635c09a"},
+    {file = "stockfish-3.23.0.tar.gz", hash = "sha256:7c86746f2ed52bd7a7f2e428f0991f8f00c0b8dd3c25b769f8fdb4c2dcf78f28"},
 ]
 terminaltables = [
     {file = "terminaltables-3.1.10-py2.py3-none-any.whl", hash = "sha256:e4fdc4179c9e4aab5f674d80f09d76fa436b96fdc698a8505e0a36bf0804a874"},
