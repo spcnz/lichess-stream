@@ -95,7 +95,7 @@ services:
       retries: 3
 
   kafka-connect:
-    image: 'confluentinc/cp-kafka-connect:latest'
+    build: ./kafka-connect-configuration/.
     container_name: 'kafka-connect'
     hostname: 'kafka-connect'
     healthcheck:
@@ -108,7 +108,7 @@ services:
     ports:
       - '8083:8082'
     volumes:
-      - kafka-connect:/etc/kafka-connect/jars
+      - ./kafka-connect:/etc/kafka-connect/jars
       - kafka-connect-conf:/etc/kafka-connect/connectors
     environment:
       - CONNECT_BOOTSTRAP_SERVERS=kafka1:9092,kafka2:9093,kafka3:9094
@@ -125,6 +125,7 @@ services:
       - CONNECT_VALUE_CONVERTER_SCHEMAS_ENABLE=false
       - CONNECT_REST_ADVERTISED_HOST_NAME=kafka-connect
       - CONNECT_PLUGIN_PATH=/etc/kafka-connect/jars
+      - CONNECTOR_CONFIG_FILE=conector-config.json
     depends_on:
       - zoo
       - kafka1
@@ -132,7 +133,7 @@ services:
       - kafka3
 
   cass1:
-    build: .
+    build: ./cassandra-configuration/.
     container_name: cass1
     hostname: cass1
     mem_limit: 3g
