@@ -1,14 +1,17 @@
 {
    "name": "cassandra-json-sink",
    "config": {
-       "connector.class": "com.datastax.oss.kafka.sink.CassandraSinkConnector",
-       "tasks.max": "1",
-       "topics": "cassandra-sink",
-       "contactPoints": "cass1",
-       "loadBalancing.localDc": "Mars",
-       "topic.json_topic.connect.json_table.mapping": "game_id=key, fen=value.fen, lm=value.lm, wc=value.wc,  bc=value.bc",
-       "key.converter": "org.apache.kafka.connect.storage.StringConverter",
-       "key.converter.schemas.enable": false,
-       "value.converter.schemas.enable": false
+     "connector.class": "com.datastax.oss.kafka.sink.CassandraSinkConnector",
+     "tasks.max": "1",
+     "topics": "cassandra-sink",
+     "contactPoints": "cass1",
+     "loadBalancing.localDc": "Mars",
+     "topic.cassandra-sink.chess.moves_by_game_id.mapping": "played_at=now(), game_id=value.game_id, fen=value.fen, lm=value.lm, wc=value.wc,  bc=value.bc",
+     "topic.cassandra-sink.chess.moves_by_game_id.query": "INSERT INTO chess.moves_by_game_id (game_id, fen, lm, wc, bc, played_at) VALUES (:game_id, :fen, :lm, :wc, :bc, :played_at)",
+     "topic.cassandra-sink.chess.moves_by_game_id.consistencyLevel": "LOCAL_ONE",
+     "topic.cassandra-sink.chess.moves_by_game_id.deletesEnabled": false,
+     "topic.cassandra-sink.chess.moves_by_game_id.timestampTimeUnit":"SECONDS",
+     "key.converter.schemas.enable": false,
+     "value.converter.schemas.enable": false
    }
 }

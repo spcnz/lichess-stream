@@ -2,6 +2,7 @@ import os
 import faust
 from faust.models.fields import Optional
 from stockfish import Stockfish
+import time
 
 class GameEvent(faust.Record):
     id: int
@@ -34,7 +35,7 @@ async def move_played(moves):
     async for move in moves:
         move.game_id = GAME_ID
         print(f'New move:  {move}')
-        await cassandra_sink.send(key=GAME_ID, value=move.dumps())
+        await cassandra_sink.send(value=move.dumps())
 
 
 @app.agent(events_topic)

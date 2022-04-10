@@ -10,4 +10,5 @@ COPY ./poetry.lock pyproject.toml /code/
 RUN poetry config virtualenvs.create false
 RUN poetry install
 COPY . /code/
+EXPOSE 3000
 ENTRYPOINT ["poetry", "run", "faust", "-A", "consumer", "worker", "-l", "info"]

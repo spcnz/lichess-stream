@@ -3,6 +3,7 @@ networks:
   cassandra:
   kafka-net:
     driver: bridge
+
 services:
   zoo:
     image: zookeeper:3.4.9
@@ -31,7 +32,6 @@ services:
       KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: PLAINTEXT:PLAINTEXT,PLAINTEXT_HOST:PLAINTEXT
       KAFKA_INTER_BROKER_LISTENER_NAME: PLAINTEXT
       KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
-    command: sh -c "((sleep 10 && kafka-topics --create --if-not-exists --zookeeper zoo:2181 --replication-factor 3 --partitions 3  --topic game-moves)&) && /etc/confluent/docker/run "
     volumes:
       - kafka1:/var/lib/kafka/data
     networks:
@@ -56,7 +56,6 @@ services:
       KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: PLAINTEXT:PLAINTEXT,PLAINTEXT_HOST:PLAINTEXT
       KAFKA_INTER_BROKER_LISTENER_NAME: PLAINTEXT
       KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
-    command: sh -c "((sleep 10 && kafka-topics --create --if-not-exists --zookeeper zoo:2181 --replication-factor 3 --partitions 3  --topic game-events)&) && /etc/confluent/docker/run "
     volumes:
       - kafka2:/var/lib/kafka/data
     networks:
@@ -81,7 +80,6 @@ services:
       KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: PLAINTEXT:PLAINTEXT,PLAINTEXT_HOST:PLAINTEXT
       KAFKA_INTER_BROKER_LISTENER_NAME: PLAINTEXT
       KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
-    command: sh -c "((sleep 10 && kafka-topics --create --if-not-exists --zookeeper zoo:2181 --replication-factor 3 --partitions 3  --topic cassandra-sink)&) && /etc/confluent/docker/run "
     volumes:
       - kafka3:/var/lib/kafka/data
     networks:
@@ -125,7 +123,6 @@ services:
       - CONNECT_VALUE_CONVERTER_SCHEMAS_ENABLE=false
       - CONNECT_REST_ADVERTISED_HOST_NAME=kafka-connect
       - CONNECT_PLUGIN_PATH=/etc/kafka-connect/jars
-      - CONNECTOR_CONFIG_FILE=conector-config.json
     depends_on:
       - zoo
       - kafka1
@@ -193,7 +190,30 @@ services:
       kafka3:
          condition: service_healthy
 
-
+  chess-be:
+      build: ./chess-be/.
+      container_name: chess-be
+      environment:
+        CASSANDRA_CLUSTER: cass1
+        CASSANDRA_KEYSPACE: chess
+      ports:
+        - "8008:8008"
+      networks:
+        - cassandra
+      depends_on:
+        cass1:
+          condition: service_healthy
+  chess-fe:
+    container_name: chess-fe
+    build: ./chess-fe/.
+    ports:
+      - "3000:3000"
+    environment:
+      REACT_APP_SERVER_PORT: 8008
+    links:
+      - "chess-be:be"
+    depends_on:
+      - chess-be
 
 volumes:
   zoo:

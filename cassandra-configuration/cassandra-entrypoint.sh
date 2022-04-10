@@ -11,7 +11,7 @@ fi
 
 if [[ ! -z "$CASSANDRA_KEYSPACE" && "$CASSANDRA_TABLE" && $1 = 'cassandra' ]]; then
   # Create default keyspace for single node cluster
-  CQL_TABLE="CREATE TABLE IF NOT EXISTS $CASSANDRA_KEYSPACE.$CASSANDRA_TABLE (game_id text, fen text, lm text, wc int, bc int, PRIMARY KEY(game_id, wc));"
+  CQL_TABLE="CREATE TABLE IF NOT EXISTS $CASSANDRA_KEYSPACE.$CASSANDRA_TABLE (game_id text, played_at timeuuid, fen text, lm text, wc int, bc int, PRIMARY KEY(game_id, played_at)) WITH CLUSTERING ORDER BY (played_at DESC);"
   until echo $CQL_TABLE | cqlsh; do
     echo "cqlsh: Cassandra is unavailable - retry later table"
     sleep 2
