@@ -90,44 +90,45 @@ services:
       interval: 10s
       timeout: 60s
       retries: 3
-
-  kafka-connect:
-    build: ./kafka-connect-configuration/.
-    container_name: 'kafka-connect'
-    hostname: 'kafka-connect'
-    healthcheck:
-      test: [ "CMD-SHELL", "nc -z localhost 8083 || exit 1" ]
-      interval: 5s
-      timeout: 5s
-      retries: 60
-    networks:
-      - kafka-net
-    ports:
-      - '8083:8082'
-    volumes:
-      - ./kafka-connect:/etc/kafka-connect/jars
-      - kafka-connect-conf:/etc/kafka-connect/connectors
-    environment:
-      - CONNECT_BOOTSTRAP_SERVERS=kafka1:9092,kafka2:9093,kafka3:9094
-      - CONNECT_REST_PORT=8082
-      - CONNECT_GROUP_ID=cassandraConnect
-      - CONNECT_CONFIG_STORAGE_TOPIC=cassandraconnect-config
-      - CONNECT_OFFSET_STORAGE_TOPIC=cassandraconnect-offset
-      - CONNECT_STATUS_STORAGE_TOPIC=cassandraconnect-status
-      - CONNECT_KEY_CONVERTER=org.apache.kafka.connect.json.JsonConverter
-      - CONNECT_VALUE_CONVERTER=org.apache.kafka.connect.json.JsonConverter
-      - CONNECT_INTERNAL_KEY_CONVERTER=org.apache.kafka.connect.json.JsonConverter
-      - CONNECT_INTERNAL_VALUE_CONVERTER=org.apache.kafka.connect.json.JsonConverter
-      - CONNECT_KEY_CONVERTER_SCHEMAS_ENABLE=false
-      - CONNECT_VALUE_CONVERTER_SCHEMAS_ENABLE=false
-      - CONNECT_REST_ADVERTISED_HOST_NAME=kafka-connect
-      - CONNECT_PLUGIN_PATH=/etc/kafka-connect/jars
-    depends_on:
-      - zoo
-      - kafka1
-      - kafka2
-      - kafka3
-
+#
+#  kafka-connect:
+#    build: ./kafka-connect-configuration/.
+#    container_name: 'kafka-connect'
+#    hostname: 'kafka-connect'
+#    healthcheck:
+#      test: [ "CMD-SHELL", "nc -z localhost 8083 || exit 1" ]
+#      interval: 5s
+#      timeout: 5s
+#      retries: 60
+#    networks:
+#      - kafka-net
+#    ports:
+#      - '8083:8082'
+#    volumes:
+#      - ./kafka-connect:/etc/kafka-connect/jars
+#      - kafka-connect-conf:/etc/kafka-connect/connectors
+#    environment:
+#      - CONNECT_BOOTSTRAP_SERVERS=kafka1:9092,kafka2:9093,kafka3:9094
+#      - CONNECT_REST_PORT=8082
+#      - CONNECT_GROUP_ID=cassandraConnect
+#      - CONNECT_CONFIG_STORAGE_TOPIC=cassandraconnect-config
+#      - CONNECT_OFFSET_STORAGE_TOPIC=cassandraconnect-offset
+#      - CONNECT_STATUS_STORAGE_TOPIC=cassandraconnect-status
+#      - CONNECT_KEY_CONVERTER=org.apache.kafka.connect.json.JsonConverter
+#      - CONNECT_VALUE_CONVERTER=org.apache.kafka.connect.json.JsonConverter
+#      - CONNECT_INTERNAL_KEY_CONVERTER=org.apache.kafka.connect.json.JsonConverter
+#      - CONNECT_INTERNAL_VALUE_CONVERTER=org.apache.kafka.connect.json.JsonConverter
+#      - CONNECT_KEY_CONVERTER_SCHEMAS_ENABLE=false
+#      - CONNECT_VALUE_CONVERTER_SCHEMAS_ENABLE=false
+#      - CONNECT_REST_ADVERTISED_HOST_NAME=kafka-connect
+#      - CONNECT_PLUGIN_PATH=/etc/kafka-connect/jars
+#    depends_on:
+#      - zoo
+#      - kafka1
+#      - kafka2
+#      - kafka3
+#      - cass1
+#
   cass1:
     build: ./cassandra-configuration/.
     container_name: cass1
@@ -154,6 +155,7 @@ services:
         CASSANDRA_NUM_TOKENS: 128
         CASSANDRA_KEYSPACE: chess
         CASSANDRA_TABLE: moves_by_game_id
+    restart: on-failure
 
   producer:
      build: ./producer/.
@@ -162,6 +164,7 @@ services:
        KAFKA1: "kafka1:9092"
        KAFKA2: "kafka2:9093"
        KAFKA3: "kafka3:9094"
+     restart: on-failure
      networks:
        - kafka-net
      depends_on:
@@ -171,8 +174,9 @@ services:
         condition: service_healthy
       kafka3:
         condition: service_healthy
-      kafka-connect:
-        condition: service_healthy
+#      kafka-connect:
+#        condition: service_healthy
+
 
   consumer:
      build: ./consumer/.
@@ -181,6 +185,8 @@ services:
        KAFKA1: "kafka1:9092"
        KAFKA2: "kafka2:9093"
        KAFKA3: "kafka3:9094"
+       CASSANDRA_CLUSTER: cass1
+       CASSANDRA_KEYSPACE: chess
      networks:
        - kafka-net
      depends_on:
@@ -190,31 +196,35 @@ services:
          condition: service_healthy
       kafka3:
          condition: service_healthy
-
-  chess-be:
-      build: ./chess-be/.
-      container_name: chess-be
-      environment:
-        CASSANDRA_CLUSTER: cass1
-        CASSANDRA_KEYSPACE: chess
-      ports:
-        - "8008:8008"
-      networks:
-        - cassandra
-      depends_on:
-        cass1:
-          condition: service_healthy
-  chess-fe:
-    container_name: chess-fe
-    build: ./chess-fe/.
-    ports:
-      - "3000:3000"
-    environment:
-      REACT_APP_SERVER_PORT: 8008
-    links:
-      - "chess-be:be"
-    depends_on:
-      - chess-be
+     restart: on-failure
+#
+#  chess-be:
+#      build: ./chess-be/.
+#      container_name: chess-be
+#      environment:
+#        CASSANDRA_CLUSTER: cass1
+#        CASSANDRA_KEYSPACE: chess
+#      ports:
+#        - "8008:8008"
+#      networks:
+#        - cassandra
+#      depends_on:
+#        cass1:
+#          condition: service_healthy
+#      restart: on-failure
+#
+#  chess-fe:
+#    container_name: chess-fe
+#    build: ./chess-fe/.
+#    ports:
+#      - "3000:3000"
+#    environment:
+#      REACT_APP_SERVER_PORT: 8008
+#    links:
+#      - "chess-be:be"
+#    depends_on:
+#      - chess-be
+#    restart: on-failure
 
 volumes:
   zoo:

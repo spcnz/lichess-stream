@@ -1,4 +1,16 @@
-curl -X POST -H "Content-Type: application/json" "http://localhost:8083/connectors" -d '{
+#!/bin/bash
+exec /etc/confluent/docker/run
+bash -c '\
+echo -e "\n\n=============\nWaiting for Kafka Connect to start listening on localhost ⏳\n=============\n"
+while [ $(curl -s -o /dev/null -w %{http_code} http://localhost:8083/connectors) -ne 200 ] ; do
+  echo -e "\t" $(date) " Kafka Connect listener HTTP state: " $(curl -s -o /dev/null -w %{http_code} http://localhost:8083/connectors) " (waiting for 200)"
+  sleep 5
+done
+echo -e $(date) "\n\n--------------\n\o/ Kafka Connect is ready! Listener HTTP state: " $(curl -s -o /dev/null -w %{http_code} http://localhost:8083/connectors) "\n--------------\n"
+
+curl -X DELETE "http://localhost:8083/connectors/cassandra-json-sink"
+
+curl -X POST -H "Content-Type: application/json" "http://localhost:8083/connectors" -d '"'"'{
    "name": "cassandra-json-sink",
    "config": {
      "connector.class": "com.datastax.oss.kafka.sink.CassandraSinkConnector",
@@ -14,11 +26,4 @@ curl -X POST -H "Content-Type: application/json" "http://localhost:8083/connecto
      "key.converter.schemas.enable": false,
      "value.converter.schemas.enable": false
    }
-}
-'
-
-
-curl -X DELETE "http://localhost:8083/connectors/cassandra-json-sink/status"
-curl -X GET "http://localhost:8083/connectors/cassandra-json-sink/status"
-
-
+}'"'"

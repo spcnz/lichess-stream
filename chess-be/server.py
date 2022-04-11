@@ -4,15 +4,23 @@ import json
 import os
 from json import JSONEncoder
 from uuid import UUID
+from datetime import datetime, date
 
-old_default = JSONEncoder.default
+# old_default = JSONEncoder.default
+#
+# def new_default(self, obj):
+#     if isinstance(obj, UUID):
+#         return str(obj)
+#     return old_default(self, obj)
+#
+# JSONEncoder.default = new_default
 
-def new_default(self, obj):
-    if isinstance(obj, UUID):
-        return str(obj)
-    return old_default(self, obj)
+def json_serial(obj):
+    """JSON serializer for objects not serializable by default json code"""
 
-JSONEncoder.default = new_default
+    if isinstance(obj, (datetime, date)):
+        return obj.isoformat()
+    raise TypeError ("Type %s not serializable" % type(obj))
 
 KEYSPACE = os.environ["CASSANDRA_KEYSPACE"]
 cluster = Cluster([os.environ['CASSANDRA_CLUSTER']], port=9042)
@@ -30,9 +38,10 @@ class Server(BaseHTTPRequestHandler):
 
     def do_GET(self):
         self._set_headers()
-        row = session.execute('SELECT * FROM moves_by_game_id limit 1;')
+        row = session.execute('SELECT fen, game_id FROM moves_by_game_id limit 1;')
+        response = {}
         for obj in row:
-            response = json.dumps(obj._asdict())
+            response = json.dumps(obj._asdict(), default=json_serial)
         self.wfile.write(response.encode(encoding='utf_8'))
 
 

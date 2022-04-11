@@ -1,5 +1,9 @@
 FROM confluentinc/cp-kafka-connect:latest
-COPY connector-entrypoint.sh /connector-entrypoint.sh
 USER root
-RUN ["chmod", "+x", "/connector-entrypoint.sh"]
-ENTRYPOINT ["/connector-entrypoint.sh"]
+RUN mkdir /plugins
+RUN mkdir /config
+COPY kafka-connect-cassandra-*.jar /plugins/
+COPY config /config/
+RUN ["chmod", "+x", "/config/connector-entrypoint.sh"]
+ENV EXPOSED_PORT 8083
+ENTRYPOINT ["/config/connector-entrypoint.sh"]

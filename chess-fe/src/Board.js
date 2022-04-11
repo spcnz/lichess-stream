@@ -11,9 +11,10 @@ const Board = () => {
     );
     if (data) {
       console.log(data)
+      console.log("razlikuju se : ", data.fen === position)
       setPosition(data.fen)
     }
-    setTimeout(getGameStatus, 2000);
+    setTimeout(getGameStatus, 500);
   };
 
   useEffect(() => {
