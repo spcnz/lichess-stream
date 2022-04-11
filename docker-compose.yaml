@@ -172,6 +172,8 @@ services:
         condition: service_healthy
       kafka3:
         condition: service_healthy
+      kafka-connect:
+        condition: service_healthy
 
   consumer:
      build: ./consumer/.

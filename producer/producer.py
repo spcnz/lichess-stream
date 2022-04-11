@@ -68,11 +68,14 @@ def start_streaming():
         id = game["gameId"]
         response = requests.get(MOVES_URL.replace("{id}", id), stream=True)
         for line in response.iter_lines():
-            json_data = json.loads(line)
-            if (is_move_event(json_data)):
-                producer.send('game-moves', json_data)
-            else:
-                producer.send('game-events', json_data)
+            try:
+                json_data = json.loads(line)
+                if (is_move_event(json_data)):
+                    producer.send('game-moves', json_data)
+                else:
+                    producer.send('game-events', json_data)
+            except:
+                continue
 
 if __name__ == "__main__":
     create_topics()
