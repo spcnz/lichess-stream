@@ -31,7 +31,6 @@ services:
       KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: PLAINTEXT:PLAINTEXT,PLAINTEXT_HOST:PLAINTEXT
       KAFKA_INTER_BROKER_LISTENER_NAME: PLAINTEXT
       KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
-    command: sh -c "((sleep 10 && kafka-topics --create --if-not-exists --zookeeper zoo:2181 --replication-factor 3 --partitions 3  --topic game-moves)&) && /etc/confluent/docker/run "
     volumes:
       - kafka1:/var/lib/kafka/data
     networks:
@@ -56,7 +55,6 @@ services:
       KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: PLAINTEXT:PLAINTEXT,PLAINTEXT_HOST:PLAINTEXT
       KAFKA_INTER_BROKER_LISTENER_NAME: PLAINTEXT
       KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
-    command: sh -c "((sleep 10 && kafka-topics --create --if-not-exists --zookeeper zoo:2181 --replication-factor 3 --partitions 3  --topic game-events)&) && /etc/confluent/docker/run "
     volumes:
       - kafka2:/var/lib/kafka/data
     networks:
@@ -81,7 +79,6 @@ services:
       KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: PLAINTEXT:PLAINTEXT,PLAINTEXT_HOST:PLAINTEXT
       KAFKA_INTER_BROKER_LISTENER_NAME: PLAINTEXT
       KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
-    command: sh -c "((sleep 10 && kafka-topics --create --if-not-exists --zookeeper zoo:2181 --replication-factor 3 --partitions 3  --topic cassandra-sink)&) && /etc/confluent/docker/run "
     volumes:
       - kafka3:/var/lib/kafka/data
     networks:
@@ -94,31 +91,10 @@ services:
       timeout: 60s
       retries: 3
 
-
-  kafka-sr1:
-    image: 'confluentinc/cp-schema-registry:latest'
-    container_name: 'kafka-sr1'
-    hostname: 'kafka-sr1'
-    healthcheck:
-      test: [ "CMD-SHELL", "nc -z kafka-sr1 8081 || exit 1" ]
-      interval: 5s
-      timeout: 5s
-      retries: 60
-    networks:
-      - kafka-net
-    ports:
-      - '8081:8081'
-    environment:
-      - SCHEMA_REGISTRY_KAFKASTORE_BOOTSTRAP_SERVERS=kafka1:9092,kafka2:9093,kafka3:9094
-      - SCHEMA_REGISTRY_HOST_NAME=kafka-sr1
-      - SCHEMA_REGISTRY_LISTENERS=http://kafka-sr1:8081
-    depends_on:
-      - zoo
-
-  kafka-connect1:
-    image: 'confluentinc/cp-kafka-connect:latest'
-    container_name: 'kafka-connect1'
-    hostname: 'kafka-connect1'
+  kafka-connect:
+    build: ./kafka-connect-configuration/.
+    container_name: 'kafka-connect'
+    hostname: 'kafka-connect'
     healthcheck:
       test: [ "CMD-SHELL", "nc -z localhost 8083 || exit 1" ]
       interval: 5s
@@ -129,7 +105,7 @@ services:
     ports:
       - '8083:8082'
     volumes:
-      - kafka-connect:/etc/kafka-connect/jars
+      - ./kafka-connect:/etc/kafka-connect/jars
       - kafka-connect-conf:/etc/kafka-connect/connectors
     environment:
       - CONNECT_BOOTSTRAP_SERVERS=kafka1:9092,kafka2:9093,kafka3:9094
@@ -153,7 +129,7 @@ services:
       - kafka3
 
   cass1:
-    build: .
+    build: ./cassandra-configuration/.
     container_name: cass1
     hostname: cass1
     mem_limit: 3g
@@ -179,41 +155,66 @@ services:
         CASSANDRA_KEYSPACE: chess
         CASSANDRA_TABLE: moves_by_game_id
 
-#  producer:
-#     build: ./producer/.
-#     container_name: producer
-#     environment:
-#       KAFKA1: "kafka1:9092"
-#       KAFKA2: "kafka2:9093"
-#       KAFKA3: "kafka3:9094"
-#     networks:
-#       - kafka-net
-#     depends_on:
-#      kafka1:
-#        condition: service_healthy
-#      kafka2:
-#        condition: service_healthy
-#      kafka3:
-#        condition: service_healthy
-#
-#  consumer:
-#     build: ./consumer/.
-#     container_name: consumer
-#     environment:
-#       KAFKA1: "kafka1:9092"
-#       KAFKA2: "kafka2:9093"
-#       KAFKA3: "kafka3:9094"
-#     networks:
-#       - kafka-net
-#     depends_on:
-#      kafka1:
-#         condition: service_healthy
-#      kafka2:
-#         condition: service_healthy
-#      kafka3:
-#         condition: service_healthy
+  producer:
+     build: ./producer/.
+     container_name: producer
+     environment:
+       KAFKA1: "kafka1:9092"
+       KAFKA2: "kafka2:9093"
+       KAFKA3: "kafka3:9094"
+     networks:
+       - kafka-net
+     depends_on:
+      kafka1:
+        condition: service_healthy
+      kafka2:
+        condition: service_healthy
+      kafka3:
+        condition: service_healthy
+      kafka-connect:
+        condition: service_healthy
 
+  consumer:
+     build: ./consumer/.
+     container_name: consumer
+     environment:
+       KAFKA1: "kafka1:9092"
+       KAFKA2: "kafka2:9093"
+       KAFKA3: "kafka3:9094"
+     networks:
+       - kafka-net
+     depends_on:
+      kafka1:
+         condition: service_healthy
+      kafka2:
+         condition: service_healthy
+      kafka3:
+         condition: service_healthy
 
+  chess-be:
+      build: ./chess-be/.
+      container_name: chess-be
+      environment:
+        CASSANDRA_CLUSTER: cass1
+        CASSANDRA_KEYSPACE: chess
+      ports:
+        - "8008:8008"
+      networks:
+        - cassandra
+      depends_on:
+        cass1:
+          condition: service_healthy
+  chess-fe:
+    container_name: chess-fe
+    build: ./chess-fe/.
+    ports:
+      - "3000:3000"
+    environment:
+      REACT_APP_SERVER_PORT: 8008
+    links:
+      - "chess-be:be"
+    depends_on:
+      - chess-be
 
 volumes:
   zoo:

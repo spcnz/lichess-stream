@@ -2,13 +2,14 @@ import os
 import faust
 from faust.models.fields import Optional
 from stockfish import Stockfish
+import time
 
 class GameEvent(faust.Record):
     id: int
     name: str
 
 
-class GameMove(faust.Record):
+class GameMove(faust.Record, serializer='json'):
     game_id: Optional[int]
     fen: str
     lm: Optional[str]
@@ -23,7 +24,7 @@ app = faust.App('consumer', broker=[
         ], key_serializer='json')
 moves_topic = app.topic('game-moves', value_type=GameMove)
 events_topic = app.topic('game-events', value_type=bytes)
-cassandra_sink = app.topic('cassandra_sink', value_type=bytes)
+cassandra_sink = app.topic('cassandra-sink', value_type=bytes)
 
 stockfish = Stockfish(path="./stockfish_14.1_linux_x64")
 
@@ -34,6 +35,7 @@ async def move_played(moves):
     async for move in moves:
         move.game_id = GAME_ID
         print(f'New move:  {move}')
+        await cassandra_sink.send(value=move.dumps())
 
 
 @app.agent(events_topic)
