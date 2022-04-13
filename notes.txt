@@ -6,8 +6,8 @@ curl -X POST -H "Content-Type: application/json" "http://localhost:8083/connecto
      "topics": "cassandra-sink",
      "contactPoints": "cass1",
      "loadBalancing.localDc": "Mars",
-     "topic.cassandra-sink.chess.moves_by_game_id.mapping": "day=value.day, played_at=value.played_at, game_id=value.game_id, fen=value.fen, lm=value.lm, wc=value.wc,  bc=value.bc",
-     "topic.cassandra-sink.chess.moves_by_game_id.query": "INSERT INTO chess.moves_by_game_id (game_id, fen, lm, wc, bc, played_at, day) VALUES (:game_id, :fen, :lm, :wc, :bc, :played_at, :day)",
+     "topic.cassandra-sink.chess.moves_by_game_id.mapping": "day=value.day, played_at=value.played_at, game_id=value.game_id, fen=value.fen, lm=value.lm, wc=value.wc,  bc=value.bc, next_best2=value.next_best2, next_best1=value.next_best1, evaluation=value.evaluation",
+     "topic.cassandra-sink.chess.moves_by_game_id.query": "INSERT INTO chess.moves_by_game_id (game_id, fen, lm, wc, bc, played_at, day, next_best2, next_best1, evaluation) VALUES (:game_id, :fen, :lm, :wc, :bc, :played_at, :day, :next_best2, :next_best1, :evaluation)",
      "topic.cassandra-sink.chess.moves_by_game_id.consistencyLevel": "LOCAL_ONE",
      "topic.cassandra-sink.chess.moves_by_game_id.deletesEnabled": false,
      "topic.cassandra-sink.chess.moves_by_game_id.timestampTimeUnit":"SECONDS",
@@ -22,3 +22,6 @@ curl -X DELETE "http://localhost:8083/connectors/cassandra-json-sink/status"
 curl -X GET "http://localhost:8083/connectors/cassandra-json-sink/status"
 
 
+/spark/bin/spark-submit  --conf "spark.driver.extraJavaOptions=-Dhttp.proxyHost=proxy.uns.ac.rs -Dhttp.proxyPort=8080 -Dhttps.proxyHost=proxy.uns.ac.rs  -Dhttps.proxyPort=8080"  --packages org.mongodb.spark:mongo-spark-connector_2.12:3.0.1
+
+/spark/bin/spark-submit  --conf "spark.driver.extraJavaOptions=-Dhttp.proxyHost=proxy.uns.ac.rs -Dhttp.proxyPort=8080 -Dhttps.proxyHost=proxy.uns.ac.rs  -Dhttps.proxyPort=8080"

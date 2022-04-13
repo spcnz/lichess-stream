@@ -56,7 +56,7 @@ def is_move_event(json_data):
 
 def load_game():
     games = requests.get(GAMES_URL.replace("{speed}", "channels")).json()
-    return games['Bullet']
+    return games['Rapid']
 
 
 def start_streaming():

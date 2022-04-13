@@ -6,14 +6,6 @@ from json import JSONEncoder
 from uuid import UUID
 from datetime import datetime, date
 
-# old_default = JSONEncoder.default
-#
-# def new_default(self, obj):
-#     if isinstance(obj, UUID):
-#         return str(obj)
-#     return old_default(self, obj)
-#
-# JSONEncoder.default = new_default
 
 def json_serial(obj):
     """JSON serializer for objects not serializable by default json code"""
@@ -38,7 +30,7 @@ class Server(BaseHTTPRequestHandler):
 
     def do_GET(self):
         self._set_headers()
-        row = session.execute('SELECT fen, game_id FROM moves_by_game_id limit 1;')
+        row = session.execute('SELECT game_id, fen, lm, wc , bc , next_best1 , next_best2 ,evaluation FROM moves_by_game_id limit 1;')
         response = {}
         for obj in row:
             response = json.dumps(obj._asdict(), default=json_serial)

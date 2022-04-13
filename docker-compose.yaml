@@ -90,44 +90,44 @@ services:
       interval: 10s
       timeout: 60s
       retries: 3
-#
-#  kafka-connect:
-#    build: ./kafka-connect-configuration/.
-#    container_name: 'kafka-connect'
-#    hostname: 'kafka-connect'
-#    healthcheck:
-#      test: [ "CMD-SHELL", "nc -z localhost 8083 || exit 1" ]
-#      interval: 5s
-#      timeout: 5s
-#      retries: 60
-#    networks:
-#      - kafka-net
-#    ports:
-#      - '8083:8082'
-#    volumes:
-#      - ./kafka-connect:/etc/kafka-connect/jars
-#      - kafka-connect-conf:/etc/kafka-connect/connectors
-#    environment:
-#      - CONNECT_BOOTSTRAP_SERVERS=kafka1:9092,kafka2:9093,kafka3:9094
-#      - CONNECT_REST_PORT=8082
-#      - CONNECT_GROUP_ID=cassandraConnect
-#      - CONNECT_CONFIG_STORAGE_TOPIC=cassandraconnect-config
-#      - CONNECT_OFFSET_STORAGE_TOPIC=cassandraconnect-offset
-#      - CONNECT_STATUS_STORAGE_TOPIC=cassandraconnect-status
-#      - CONNECT_KEY_CONVERTER=org.apache.kafka.connect.json.JsonConverter
-#      - CONNECT_VALUE_CONVERTER=org.apache.kafka.connect.json.JsonConverter
-#      - CONNECT_INTERNAL_KEY_CONVERTER=org.apache.kafka.connect.json.JsonConverter
-#      - CONNECT_INTERNAL_VALUE_CONVERTER=org.apache.kafka.connect.json.JsonConverter
-#      - CONNECT_KEY_CONVERTER_SCHEMAS_ENABLE=false
-#      - CONNECT_VALUE_CONVERTER_SCHEMAS_ENABLE=false
-#      - CONNECT_REST_ADVERTISED_HOST_NAME=kafka-connect
-#      - CONNECT_PLUGIN_PATH=/etc/kafka-connect/jars
-#    depends_on:
-#      - zoo
-#      - kafka1
-#      - kafka2
-#      - kafka3
-#      - cass1
+
+  kafka-connect:
+    build: ./kafka-connect-configuration/.
+    container_name: 'kafka-connect'
+    hostname: 'kafka-connect'
+    healthcheck:
+      test: [ "CMD-SHELL", "nc -z localhost 8083 || exit 1" ]
+      interval: 5s
+      timeout: 5s
+      retries: 60
+    networks:
+      - kafka-net
+    ports:
+      - '8083:8082'
+    volumes:
+      - ./kafka-connect:/etc/kafka-connect/jars
+      - kafka-connect-conf:/etc/kafka-connect/connectors
+    environment:
+      - CONNECT_BOOTSTRAP_SERVERS=kafka1:9092,kafka2:9093,kafka3:9094
+      - CONNECT_REST_PORT=8082
+      - CONNECT_GROUP_ID=cassandraConnect
+      - CONNECT_CONFIG_STORAGE_TOPIC=cassandraconnect-config
+      - CONNECT_OFFSET_STORAGE_TOPIC=cassandraconnect-offset
+      - CONNECT_STATUS_STORAGE_TOPIC=cassandraconnect-status
+      - CONNECT_KEY_CONVERTER=org.apache.kafka.connect.json.JsonConverter
+      - CONNECT_VALUE_CONVERTER=org.apache.kafka.connect.json.JsonConverter
+      - CONNECT_INTERNAL_KEY_CONVERTER=org.apache.kafka.connect.json.JsonConverter
+      - CONNECT_INTERNAL_VALUE_CONVERTER=org.apache.kafka.connect.json.JsonConverter
+      - CONNECT_KEY_CONVERTER_SCHEMAS_ENABLE=false
+      - CONNECT_VALUE_CONVERTER_SCHEMAS_ENABLE=false
+      - CONNECT_REST_ADVERTISED_HOST_NAME=kafka-connect
+      - CONNECT_PLUGIN_PATH=/etc/kafka-connect/jars
+    depends_on:
+      - zoo
+      - kafka1
+      - kafka2
+      - kafka3
+      - cass1
 #
   cass1:
     build: ./cassandra-configuration/.
@@ -197,34 +197,125 @@ services:
       kafka3:
          condition: service_healthy
      restart: on-failure
-#
-#  chess-be:
-#      build: ./chess-be/.
-#      container_name: chess-be
-#      environment:
-#        CASSANDRA_CLUSTER: cass1
-#        CASSANDRA_KEYSPACE: chess
-#      ports:
-#        - "8008:8008"
-#      networks:
-#        - cassandra
-#      depends_on:
-#        cass1:
-#          condition: service_healthy
-#      restart: on-failure
-#
-#  chess-fe:
-#    container_name: chess-fe
-#    build: ./chess-fe/.
-#    ports:
-#      - "3000:3000"
-#    environment:
-#      REACT_APP_SERVER_PORT: 8008
-#    links:
-#      - "chess-be:be"
-#    depends_on:
-#      - chess-be
-#    restart: on-failure
+
+  chess-be:
+      build: ./chess-be/.
+      container_name: chess-be
+      environment:
+        CASSANDRA_CLUSTER: cass1
+        CASSANDRA_KEYSPACE: chess
+      ports:
+        - "8008:8008"
+      networks:
+        - cassandra
+      depends_on:
+        cass1:
+          condition: service_healthy
+      restart: on-failure
+
+  chess-fe:
+    container_name: chess-fe
+    build: ./chess-fe/.
+    ports:
+      - "3000:3000"
+    environment:
+      REACT_APP_SERVER_PORT: 8008
+    links:
+      - "chess-be:be"
+    depends_on:
+      - chess-be
+    restart: on-failure
+
+  namenode:
+    image: bde2020/hadoop-namenode:2.0.0-hadoop3.2.1-java8
+    container_name: namenode
+    volumes:
+      - hadoop_namenode:/hadoop/dfs/name
+      - ./batch_process/data:/data
+      - ./batch_process/load_data.sh:/load_data.sh
+    environment:
+      - CLUSTER_NAME=test
+    env_file:
+      - ./hadoop.env
+    ports:
+      - 9870:9870
+      - 9000:9000
+
+  datanode1:
+    image: bde2020/hadoop-datanode:2.0.0-hadoop3.2.1-java8
+    container_name: datanode1
+    depends_on:
+      - namenode
+    volumes:
+      - hadoop_datanode1:/hadoop/dfs/data
+    env_file:
+      - ./hadoop.env
+
+  datanode2:
+    image: bde2020/hadoop-datanode:2.0.0-hadoop3.2.1-java8
+    container_name: datanode2
+    depends_on:
+      - namenode
+    volumes:
+      - hadoop_datanode2:/hadoop/dfs/data
+    env_file:
+      - ./hadoop.env
+
+  spark-master:
+    image: bde2020/spark-master:3.0.1-hadoop3.2
+    container_name: spark-master
+    ports:
+      - 8080:8080
+      - 7077:7077
+    environment:
+      - PYSPARK_PYTHON=python3
+    env_file:
+      - ./hadoop.env
+    volumes:
+      - ./batch_process:/home/batch_process
+
+  spark-worker1:
+    image: bde2020/spark-worker:3.0.1-hadoop3.2
+    container_name: spark-worker1
+    depends_on:
+      - spark-master
+    environment:
+      - SPARK_MASTER=spark://spark-master:7077
+    ports:
+      - 8081:8081
+    env_file:
+      - ./hadoop.env
+
+  spark-worker2:
+    image: bde2020/spark-worker:3.0.1-hadoop3.2
+    container_name: spark-worker2
+    depends_on:
+      - spark-master
+    environment:
+      - SPARK_MASTER=spark://spark-master:7077
+    ports:
+      - 8082:8081
+    env_file:
+      - ./hadoop.env
+
+
+  mongodb:
+    image: mongo
+    container_name: mongodb
+    volumes:
+      - mongodb:/data/db
+    ports:
+      - '27017:27017'
+    expose:
+      - '27017'
+
+  metabase:
+    image: metabase/metabase:latest
+    container_name: metabase
+    volumes:
+      - metabase:/metabase-data
+    ports:
+      - '3001:3000'
 
 volumes:
   zoo:
@@ -235,3 +326,8 @@ volumes:
   kafka-connect:
   kafka-connect-conf:
   cassandra_data:
+  hadoop_namenode:
+  hadoop_datanode1:
+  hadoop_datanode2:
+  mongodb:
+  metabase:

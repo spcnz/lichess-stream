@@ -7,7 +7,20 @@ session = cluster.connect(KEYSPACE, wait_for_all_pools=True)
 
 
 
-def batch_template(id, value):
-    template = "BATCH INSERT INTO games_by_id (game_id, correct) VALUES (:id, :value);"
+def update_counter_column(id, column_name, value):
+    cql = f"UPDATE games_by_id_counter SET {column_name} = {column_name} + {value} WHERE game_id = '{id}';"
+    session.execute(cql)
+    print("EXECUTED CQL STATEMENT : ", cql)
+    return cql
 
-    return template.replace(":id", id).replace(":value", value)
+
+
+def insert_game(game, moves_num):
+    cql = f"INSERT INTO games_by_id (game_id, status, winner, moves_num, speed) VALUES ('{game.id}', '{game.status.name}', '{game.winner}', {moves_num}, '{game.speed}');"
+    session.execute(cql)
+    print("EXECUTED CQL STATEMENT : \n\n", cql)
+
+    cql = f"UPDATE games_by_id_counter SET mistakes = mistakes + 0 WHERE game_id = '{game.id}';"
+    session.execute(cql)
+    print("EXECUTED CQL STATEMENT : ", cql)
+    return cql
