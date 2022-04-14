@@ -50,11 +50,9 @@ const Board = () => {
 
   return (
     <div>
-      <Timer seconds={position?.bc} style={blackTimerStyle} />
       <div  style={{ margin: 'auto', width: '50%'}}>
         <Chessboard position={position?.fen} />
       </div>
-        <Timer seconds={position?.wc} style={whiteTimerStyle} />
         <h2>Last move: {position?.lm} Next best moves are: {position?.next_best1} {position?.next_best2}</h2>
     </div>
   )
