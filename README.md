@@ -25,3 +25,10 @@ Docker & docker-compose tool for managing containerized applications.
 Architecture components
 ====
 ![big_daaaata_dij drawio](https://user-images.githubusercontent.com/52412989/170780804-6a71dacc-5a9e-4148-8e02-abeb5457fafa.png)
+
+Demo
+====
+
+https://user-images.githubusercontent.com/52412989/170799644-a2184bb9-d867-443f-a092-a79645c622a1.mp4
+
+
