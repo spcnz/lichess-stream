@@ -2,16 +2,16 @@
 
 About
 ====
-Project for course Big data architectures at FTN, Novi Sad. 
-Project consists of two parts: 
+Project for the course Big data architectures at FTN, Novi Sad. 
+The project consists of two parts: 
 - Stream processing
 - Batch processing
 
 Real-time processing includes
-streaming chess moves from game currently played at [lichess tv game](https://lichess.org/tv) and analysing board state with [stockfish chess engine](https://stockfishchess.org/).
+streaming chess moves from game currently played on [lichess tv game](https://lichess.org/tv) and analysing board state with the [stockfish chess engine](https://stockfishchess.org/).
 
 
-Batch processing includes storing large [dataset](https://www.kaggle.com/datasets/maca11/chess-games-from-lichess-20132014) to distributed file system HDFS
+Batch processing includes storing large [dataset](https://www.kaggle.com/datasets/maca11/chess-games-from-lichess-20132014) on the distributed file system HDFS
 and processing it using Apache Spark. 
 
 Milena Laketić
